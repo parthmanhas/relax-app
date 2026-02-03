@@ -1,0 +1,8 @@
+/* Existing index.css already has the main styles. 
+   App.css can be used for component-specific overrides if needed, 
+   but for this simple app, index.css is enough. 
+   We'll keep App.css minimal or empty to avoid conflicts. */
+.relax-word {
+  /* Ensuring the breathe animation works correctly with React state styles */
+  will-change: transform, opacity, letter-spacing;
+}
