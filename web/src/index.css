@@ -11,6 +11,7 @@
   --btn-shadow: rgba(0, 0, 0, 0.05);
   --counter-gradient-start: #667eea;
   --counter-gradient-end: #764ba2;
+  --login-btn-bg: white;
 }
 
 body.dark-mode {
@@ -26,6 +27,7 @@ body.dark-mode {
   --btn-shadow: rgba(0, 0, 0, 0.4);
   --counter-gradient-start: #a5b4fc;
   --counter-gradient-end: #c084fc;
+  --login-btn-bg: #2d3748;
   background: url('/assets/dark_background.png') no-repeat center center fixed;
   background-size: cover;
 }
@@ -165,26 +167,18 @@ body {
   transition: color 0.5s ease;
 }
 
-.plus-btn {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  border: none;
-  background: var(--btn-bg);
-  box-shadow: 0 10px 20px var(--btn-shadow);
-  color: var(--primary-color);
-  cursor: pointer;
+.card-header {
+  width: 100%;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  outline: none;
+  position: absolute;
+  top: 1.5rem;
+  left: 0;
+  padding: 0 1.5rem;
 }
 
 .theme-toggle {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   color: var(--text-color);
@@ -205,6 +199,82 @@ body {
   background: var(--glass-border);
 }
 
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: var(--glass-bg);
+  padding: 0.4rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+}
+
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+}
+
+.auth-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-btn {
+  background: var(--login-btn-bg);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.logout-btn {
+  background: transparent;
+  color: var(--text-color);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.logout-btn:hover {
+  opacity: 0.6;
+  transform: scale(1.1);
+}
+
+.plus-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: none;
+  background: var(--btn-bg);
+  box-shadow: 0 10px 20px var(--btn-shadow);
+  color: var(--primary-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
 .plus-btn:hover {
   transform: translateY(-5px) scale(1.05);
   box-shadow: 0 15px 30px rgba(124, 77, 255, 0.2);
@@ -220,6 +290,127 @@ body {
 
 .plus-btn:hover svg {
   transform: rotate(90deg);
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.action-btn {
+  padding: 0.8rem 1.2rem;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-color);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.action-btn:hover:not(:disabled) {
+  background: var(--glass-border);
+  transform: translateY(-2px);
+}
+
+.action-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.history-section {
+  width: 100%;
+  margin-top: 1rem;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 1.5rem;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.history-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+  color: var(--label-color);
+  margin-bottom: 0;
+}
+
+.total-sessions-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--glass-border);
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  border: 1px solid var(--glass-border);
+}
+
+.badge-label {
+  color: var(--label-color);
+}
+
+.badge-value {
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  max-height: 150px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.history-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: 10px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.history-count {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.history-date {
+  font-size: 0.75rem;
+  color: var(--label-color);
+}
+
+.no-history {
+  font-size: 0.8rem;
+  color: var(--label-color);
+  font-style: italic;
 }
 
 @keyframes breathe {
@@ -254,6 +445,49 @@ body {
   100% {
     transform: scale(1);
   }
+}
+
+.daily-summary {
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.daily-stats-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+
+.daily-stat-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  padding: 0.5rem 0.8rem;
+  border-radius: 12px;
+  min-width: 80px;
+  transition: transform 0.3s ease;
+}
+
+.daily-stat-badge:hover {
+  transform: translateY(-2px);
+  background: var(--glass-border);
+}
+
+.stat-date {
+  font-size: 0.7rem;
+  color: var(--label-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+  margin-bottom: 0.2rem;
+}
+
+.stat-count {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary-color);
 }
 
 @media (max-width: 480px) {
