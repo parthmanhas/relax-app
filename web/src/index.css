@@ -75,6 +75,7 @@ body {
   position: relative;
   z-index: 2;
   padding: 2rem;
+  padding-top: 0rem;
   width: 100%;
   max-width: 500px;
 }
@@ -86,15 +87,18 @@ body {
   border-radius: 40px;
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow);
-  padding: 3rem 2rem;
+  padding: 2.5rem 2rem;
+  /* Reduced from 3rem */
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
+  gap: 1.5rem;
+  /* Reduced from 2rem */
   transition: all 0.5s ease;
   min-height: 400px;
+  position: relative;
 }
 
 .title-area {
@@ -138,7 +142,8 @@ body {
   cursor: default;
   user-select: none;
   opacity: 0.9;
-  transition: color 0.5s ease;
+  transition: all 0.5s ease;
+  line-height: 1.2;
 }
 
 .counter-container {
@@ -173,9 +178,11 @@ body {
   justify-content: space-between;
   align-items: center;
   position: absolute;
-  top: 1.5rem;
+  top: 1rem;
+  /* Reduced from 1.5rem */
   left: 0;
-  padding: 0 1.5rem;
+  padding: 0 1.2rem;
+  z-index: 10;
 }
 
 .theme-toggle {
@@ -492,10 +499,14 @@ body {
 
 @media (max-width: 480px) {
   .relax-word {
-    font-size: 1.8rem;
+    font-size: 3.5rem;
+    /* Increased from 1.8rem to be readable but smaller than desktop */
+    letter-spacing: 0.2rem;
   }
 
   .glass-card {
-    padding: 2rem 1rem;
+    padding: 3.5rem 1rem 2rem;
+    /* Extra top padding to clear the absolute header */
+    gap: 1.25rem;
   }
 }
