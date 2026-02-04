@@ -11,6 +11,14 @@ interface HistoryItem {
   userId: string;
 }
 
+const isLoggingEnabled = import.meta.env.VITE_ENABLE_LOGS === 'true';
+
+const debugError = (message: string, error?: unknown) => {
+  if (isLoggingEnabled) {
+    console.error(message, error);
+  }
+};
+
 function App() {
   const [count, setCount] = useState(0)
   const [bump, setBump] = useState(false)
@@ -89,7 +97,7 @@ function App() {
       setDailyStats(statsArray);
 
     } catch (e) {
-      console.error("Error fetching history: ", e);
+      debugError("Error fetching history: ", e);
     }
   }, [user]);
 
@@ -101,7 +109,7 @@ function App() {
     try {
       await signInWithPopup(auth, googleProvider)
     } catch (e) {
-      console.error("Login Error: ", e)
+      debugError("Login Error: ", e)
     }
   }
 
@@ -110,7 +118,7 @@ function App() {
       await signOut(auth)
       setCount(0)
     } catch (e) {
-      console.error("Logout Error: ", e)
+      debugError("Logout Error: ", e)
     }
   }
 
@@ -140,7 +148,7 @@ function App() {
       setCount(0);
       fetchHistory();
     } catch (e) {
-      console.error("Error adding document: ", e);
+      debugError("Error adding document: ", e);
       alert("Failed to save. Please ensure 'history' collection is set up in Firestore with proper rules.");
     } finally {
       setIsSaving(false);
