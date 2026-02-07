@@ -510,3 +510,74 @@ body {
     gap: 1.25rem;
   }
 }
+
+.quotes-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 300px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.quotes-sidebar.left {
+  left: 50px;
+}
+
+.quotes-sidebar.right {
+  right: 50px;
+}
+
+.quote-container {
+  max-width: 100%;
+  text-align: center;
+  transition: opacity 1s ease, transform 1s ease;
+}
+
+.quote-container.hidden {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.quote-container.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.quote-text {
+  font-size: 1.4rem;
+  font-weight: 300;
+  /* font-style: italic; */
+  line-height: 1.5;
+  color: var(--word-color);
+  opacity: 0.5;
+  transition: color 0.5s ease;
+}
+
+@media (min-width: 1300px) {
+  .quotes-sidebar {
+    display: flex;
+  }
+}
+
+@media (max-width: 1500px) {
+  .quotes-sidebar {
+    width: 250px;
+  }
+
+  .quotes-sidebar.left {
+    left: 20px;
+  }
+
+  .quotes-sidebar.right {
+    right: 20px;
+  }
+
+  .quote-text {
+    font-size: 1.2rem;
+  }
+}

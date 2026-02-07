@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp, Timestamp, where } from 'firebase/firestore'
 import { signInWithPopup, onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { db, auth, googleProvider } from './firebase'
+import { QuotesSidebar } from './components/QuotesSidebar'
 import './App.css'
 
 interface HistoryItem {
@@ -162,6 +163,8 @@ function App() {
   return (
     <>
       <div className="background-overlay"></div>
+      <QuotesSidebar side="left" />
+      <QuotesSidebar side="right" />
       <main className="container">
         <div className="glass-card">
           <div className="card-header">
