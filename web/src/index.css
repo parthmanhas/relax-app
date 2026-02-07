@@ -267,8 +267,8 @@ body {
 }
 
 .plus-btn {
-  width: 70px;
-  height: 70px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
   border: none;
   background: var(--btn-bg);
