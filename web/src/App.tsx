@@ -13,7 +13,7 @@ interface HistoryItem {
   userId: string;
 }
 
-const WORDS = ['relax', 'dont think'] as const;
+const WORDS = ['relax', 'dont think', 'dont care'] as const;
 type WordType = typeof WORDS[number];
 
 const isLoggingEnabled = import.meta.env.VITE_ENABLE_LOGS === 'true';
@@ -27,7 +27,8 @@ const debugError = (message: string, error?: unknown) => {
 function App() {
   const [counts, setCounts] = useState<Record<WordType, number>>({
     'relax': 0,
-    'dont think': 0
+    'dont think': 0,
+    'dont care': 0
   })
   const [currentWord, setCurrentWord] = useState<WordType>('relax')
   const [bump, setBump] = useState(false)
@@ -127,7 +128,8 @@ function App() {
       await signOut(auth)
       setCounts({
         'relax': 0,
-        'dont think': 0
+        'dont think': 0,
+        'dont care': 0
       })
     } catch (e) {
       debugError("Logout Error: ", e)
