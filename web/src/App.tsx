@@ -8,9 +8,13 @@ import './App.css'
 interface HistoryItem {
   id: string;
   count: number;
+  word?: string;
   timestamp: Timestamp;
   userId: string;
 }
+
+const WORDS = ['relax', 'dont think'] as const;
+type WordType = typeof WORDS[number];
 
 const isLoggingEnabled = import.meta.env.VITE_ENABLE_LOGS === 'true';
 
@@ -21,7 +25,11 @@ const debugError = (message: string, error?: unknown) => {
 };
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [counts, setCounts] = useState<Record<WordType, number>>({
+    'relax': 0,
+    'dont think': 0
+  })
+  const [currentWord, setCurrentWord] = useState<WordType>('relax')
   const [bump, setBump] = useState(false)
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [isSaving, setIsSaving] = useState(false)
@@ -117,36 +125,50 @@ function App() {
   const handleLogout = async () => {
     try {
       await signOut(auth)
-      setCount(0)
+      setCounts({
+        'relax': 0,
+        'dont think': 0
+      })
     } catch (e) {
       debugError("Logout Error: ", e)
     }
   }
 
   const handleIncrement = useCallback(() => {
-    setCount((prev) => prev + 1)
+    setCounts((prev) => ({
+      ...prev,
+      [currentWord]: prev[currentWord] + 1
+    }))
     setBump(true)
     setTimeout(() => setBump(false), 300)
 
     if (window.navigator.vibrate) {
       window.navigator.vibrate(10)
     }
-  }, [])
+  }, [currentWord])
 
   const handleReset = useCallback(() => {
-    setCount(0);
-  }, []);
+    setCounts((prev) => ({
+      ...prev,
+      [currentWord]: 0
+    }));
+  }, [currentWord]);
 
   const handleSave = async () => {
-    if (count === 0 || !user) return;
+    const currentCount = counts[currentWord];
+    if (currentCount === 0 || !user) return;
     setIsSaving(true);
     try {
       await addDoc(collection(db, 'history'), {
-        count: count,
+        count: currentCount,
+        word: currentWord,
         timestamp: serverTimestamp(),
         userId: user.uid
       });
-      setCount(0);
+      setCounts(prev => ({
+        ...prev,
+        [currentWord]: 0
+      }));
       fetchHistory();
     } catch (e) {
       debugError("Error adding document: ", e);
@@ -206,14 +228,28 @@ function App() {
             )}
           </div>
 
+          <div className="word-toggle-container">
+            <div className="word-toggle">
+              {WORDS.map((w) => (
+                <button
+                  key={w}
+                  className={`toggle-option ${currentWord === w ? 'active' : ''}`}
+                  onClick={() => setCurrentWord(w)}
+                >
+                  {w}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="main-word-area">
             <p className="instruction-text">repeat the word</p>
-            <span className="relax-word">relax</span>
+            <span className="relax-word">{currentWord}</span>
           </div>
 
           <div className="counter-container">
             <span className={`counter ${bump ? 'bump' : ''}`}>
-              {count}
+              {counts[currentWord]}
             </span>
             <p className="counter-label">Repeats</p>
           </div>
@@ -222,7 +258,7 @@ function App() {
             <button
               className="action-btn reset-btn"
               onClick={handleReset}
-              disabled={count === 0}
+              disabled={counts[currentWord] === 0}
             >
               Reset
             </button>
@@ -230,7 +266,7 @@ function App() {
             <button
               className="plus-btn"
               onClick={handleIncrement}
-              aria-label="Add relaxation count"
+              aria-label={`Increment ${currentWord} count`}
             >
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -240,7 +276,7 @@ function App() {
             <button
               className="action-btn save-btn"
               onClick={handleSave}
-              disabled={count === 0 || isSaving || !user}
+              disabled={counts[currentWord] === 0 || isSaving || !user}
               title={!user ? "Login to save your sessions" : ""}
             >
               {isSaving ? '...' : (user ? 'Save' : 'Save')}
@@ -272,7 +308,10 @@ function App() {
               ) : history.length > 0 ? (
                 history.map((item) => (
                   <div key={item.id} className="history-item">
-                    <span className="history-count">{item.count}</span>
+                    <div className="history-info">
+                      <span className="history-count">{item.count}</span>
+                      <span className="history-word">{item.word || 'relax'}</span>
+                    </div>
                     <span className="history-date">
                       {item.timestamp?.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </span>

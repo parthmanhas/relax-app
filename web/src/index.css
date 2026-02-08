@@ -134,9 +134,9 @@ body {
 }
 
 .relax-word {
-  font-size: 5rem;
+  font-size: 3.5rem;
   font-weight: 300;
-  letter-spacing: 0.4rem;
+  letter-spacing: 0.2rem;
   color: var(--word-color);
   text-transform: lowercase;
   cursor: default;
@@ -214,6 +214,43 @@ body {
   padding: 0.4rem 0.8rem;
   border-radius: 12px;
   border: 1px solid var(--glass-border);
+}
+
+.word-toggle-container {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.word-toggle {
+  display: flex;
+  background: var(--glass-bg);
+  padding: 0.3rem;
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  gap: 0.2rem;
+  margin-top: 1rem;
+}
+
+.toggle-option {
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--label-color);
+  background: transparent;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  white-space: nowrap;
+}
+
+.toggle-option.active {
+  background: var(--primary-color);
+  color: white;
+  box-shadow: 0 4px 12px rgba(124, 77, 255, 0.3);
 }
 
 .user-avatar {
@@ -409,6 +446,19 @@ body {
   color: var(--primary-color);
 }
 
+.history-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.history-word {
+  font-size: 0.75rem;
+  color: var(--label-color);
+  text-transform: lowercase;
+  opacity: 0.8;
+}
+
 .history-date {
   font-size: 0.75rem;
   color: var(--label-color);
@@ -499,9 +549,8 @@ body {
 
 @media (max-width: 480px) {
   .relax-word {
-    font-size: 3.5rem;
-    /* Increased from 1.8rem to be readable but smaller than desktop */
-    letter-spacing: 0.2rem;
+    font-size: 2.2rem;
+    letter-spacing: 0.1rem;
   }
 
   .glass-card {
