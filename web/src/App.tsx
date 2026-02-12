@@ -11,6 +11,8 @@ interface HistoryItem {
   word?: string;
   lostFocusCount?: number;
   timestamp: Timestamp;
+  startTime?: Timestamp;
+  endTime?: Timestamp;
   userId: string;
 }
 
@@ -43,6 +45,7 @@ function App() {
   })
   const [showAllHistory, setShowAllHistory] = useState(false)
   const [heatmapData, setHeatmapData] = useState<{ date: string; count: number; dayIndex: number }[]>([])
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null)
 
   // Auth Listener
   useEffect(() => {
@@ -141,6 +144,20 @@ function App() {
       date.getFullYear() === today.getFullYear();
   };
 
+  const formatDuration = (start?: Timestamp, end?: Timestamp) => {
+    if (!start || !end) return null;
+    const diffMs = end.toMillis() - start.toMillis();
+    const seconds = Math.floor((diffMs / 1000) % 60);
+    const minutes = Math.floor((diffMs / (1000 * 60)) % 60);
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+
+    const parts = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
+    return parts.join(' ');
+  };
+
   const todaySessions = history.filter(item => isToday(item.timestamp));
   const pastSessions = history.filter(item => !isToday(item.timestamp));
 
@@ -175,12 +192,16 @@ function App() {
         'dont care': 0
       })
       setLostFocusCount(0)
+      setSessionStartTime(null)
     } catch (e) {
       debugError("Logout Error: ", e)
     }
   }
 
   const handleIncrement = useCallback(() => {
+    if (!sessionStartTime) {
+      setSessionStartTime(Date.now());
+    }
     setCounts((prev) => ({
       ...prev,
       [currentWord]: prev[currentWord] + 1
@@ -191,7 +212,7 @@ function App() {
     if (window.navigator.vibrate) {
       window.navigator.vibrate(10)
     }
-  }, [currentWord])
+  }, [currentWord, sessionStartTime])
 
   const handleReset = useCallback(() => {
     setCounts((prev) => ({
@@ -199,25 +220,32 @@ function App() {
       [currentWord]: 0
     }));
     setLostFocusCount(0);
+    setSessionStartTime(null);
   }, [currentWord]);
 
   const handleLostFocus = useCallback(() => {
+    if (!sessionStartTime) {
+      setSessionStartTime(Date.now());
+    }
     setLostFocusCount(prev => prev + 1);
     if (window.navigator.vibrate) {
       window.navigator.vibrate([10, 50, 10]);
     }
-  }, []);
+  }, [sessionStartTime]);
 
   const handleSave = async () => {
     const currentCount = counts[currentWord];
     if (currentCount === 0 || !user) return;
     setIsSaving(true);
     try {
+      const endTime = Date.now();
       await addDoc(collection(db, 'history'), {
         count: currentCount,
         word: currentWord,
         lostFocusCount: lostFocusCount,
         timestamp: serverTimestamp(),
+        startTime: sessionStartTime ? Timestamp.fromMillis(sessionStartTime) : serverTimestamp(),
+        endTime: Timestamp.fromMillis(endTime),
         userId: user.uid
       });
       setCounts(prev => ({
@@ -225,6 +253,7 @@ function App() {
         [currentWord]: 0
       }));
       setLostFocusCount(0);
+      setSessionStartTime(null);
       fetchHistory();
     } catch (e) {
       debugError("Error adding document: ", e);
@@ -439,9 +468,16 @@ function App() {
                               </div>
                             )}
                           </div>
-                          <span className="history-date">
-                            {item.timestamp?.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                          <div className="history-meta">
+                            {item.startTime && item.endTime && (
+                              <span className="history-duration" title="Session duration">
+                                {formatDuration(item.startTime, item.endTime)}
+                              </span>
+                            )}
+                            <span className="history-date">
+                              {item.timestamp?.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -481,9 +517,16 @@ function App() {
                                       </div>
                                     )}
                                   </div>
-                                  <span className="history-date">
-                                    {item.timestamp?.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
+                                  <div className="history-meta">
+                                    {item.startTime && item.endTime && (
+                                      <span className="history-duration" title="Session duration">
+                                        {formatDuration(item.startTime, item.endTime)}
+                                      </span>
+                                    )}
+                                    <span className="history-date">
+                                      {item.timestamp?.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  </div>
                                 </div>
                               ))}
                             </div>
