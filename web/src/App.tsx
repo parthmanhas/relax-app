@@ -9,6 +9,7 @@ interface HistoryItem {
   id: string;
   count: number;
   word?: string;
+  lostFocusCount?: number;
   timestamp: Timestamp;
   userId: string;
 }
@@ -30,6 +31,7 @@ function App() {
     'dont think': 0,
     'dont care': 0
   })
+  const [lostFocusCount, setLostFocusCount] = useState(0)
   const [currentWord, setCurrentWord] = useState<WordType>('relax')
   const [bump, setBump] = useState(false)
   const [history, setHistory] = useState<HistoryItem[]>([])
@@ -39,6 +41,8 @@ function App() {
     const saved = localStorage.getItem('theme')
     return saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
   })
+  const [showAllHistory, setShowAllHistory] = useState(false)
+  const [heatmapData, setHeatmapData] = useState<{ date: string; count: number; dayIndex: number }[]>([])
 
   // Auth Listener
   useEffect(() => {
@@ -60,12 +64,9 @@ function App() {
   }, [isDark])
 
   // Fetch History (User-specific)
-  const [dailyStats, setDailyStats] = useState<{ date: string; count: number }[]>([])
-
   const fetchHistory = useCallback(async () => {
     if (!user) {
       setHistory([]);
-      setDailyStats([]);
       return;
     }
     try {
@@ -74,7 +75,7 @@ function App() {
         collection(db, 'history'),
         where('userId', '==', user.uid),
         orderBy('timestamp', 'desc'),
-        limit(3)
+        limit(10)
       );
       const querySnapshotRecent = await getDocs(qRecent);
       const docsRecent = querySnapshotRecent.docs.map(doc => ({
@@ -83,33 +84,75 @@ function App() {
       })) as HistoryItem[];
       setHistory(docsRecent);
 
-      // 2. Get ALL sessions to calculate daily stats (Compressed History per day)
-      const qAll = query(
+      // 2. Fetch history for heatmap (Simplified to avoid index issues)
+      const qHeatmap = query(
         collection(db, 'history'),
         where('userId', '==', user.uid),
-        orderBy('timestamp', 'desc')
+        orderBy('timestamp', 'desc'),
+        limit(500)
       );
-      const querySnapshotAll = await getDocs(qAll);
 
-      const statsMap: { [key: string]: number } = {};
-      querySnapshotAll.docs.forEach(doc => {
+      const querySnapshotHeatmap = await getDocs(qHeatmap);
+      const statsMap: Record<string, number> = {};
+
+      const getLocalDateKey = (date: Date) => {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      };
+
+      querySnapshotHeatmap.docs.forEach(doc => {
         const data = doc.data();
         if (data.timestamp) {
-          const date = data.timestamp.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          statsMap[date] = (statsMap[date] || 0) + 1;
+          const dateKey = getLocalDateKey(data.timestamp.toDate());
+          // Count sessions (number of entries), not the total repeats within them
+          statsMap[dateKey] = (statsMap[dateKey] || 0) + 1;
         }
       });
 
-      const statsArray = Object.entries(statsMap)
-        .map(([date, count]) => ({ date, count }))
-        .slice(0, 3); // Only show last 3 days for brevity
+      // Generate last 182 days (26 weeks) of data points
+      const days: { date: string; count: number; dayIndex: number }[] = [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-      setDailyStats(statsArray);
+      // Loop to include exactly 182 days ending with TODAY
+      for (let i = 181; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateKey = getLocalDateKey(d);
+        days.push({
+          date: dateKey,
+          count: statsMap[dateKey] || 0,
+          dayIndex: d.getDay()
+        });
+      }
+      setHeatmapData(days);
 
     } catch (e) {
+      console.error("Heatmap Fetch Error:", e);
       debugError("Error fetching history: ", e);
     }
   }, [user]);
+
+  const isToday = (timestamp: Timestamp) => {
+    if (!timestamp) return false;
+    const date = timestamp.toDate();
+    const today = new Date();
+    return date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear();
+  };
+
+  const todaySessions = history.filter(item => isToday(item.timestamp));
+  const pastSessions = history.filter(item => !isToday(item.timestamp));
+
+  // Group past sessions by date
+  const groupedPastSessions = pastSessions.reduce((groups, item) => {
+    const date = item.timestamp?.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(item);
+    return groups;
+  }, {} as Record<string, HistoryItem[]>);
 
   useEffect(() => {
     fetchHistory();
@@ -131,6 +174,7 @@ function App() {
         'dont think': 0,
         'dont care': 0
       })
+      setLostFocusCount(0)
     } catch (e) {
       debugError("Logout Error: ", e)
     }
@@ -154,7 +198,15 @@ function App() {
       ...prev,
       [currentWord]: 0
     }));
+    setLostFocusCount(0);
   }, [currentWord]);
+
+  const handleLostFocus = useCallback(() => {
+    setLostFocusCount(prev => prev + 1);
+    if (window.navigator.vibrate) {
+      window.navigator.vibrate([10, 50, 10]);
+    }
+  }, []);
 
   const handleSave = async () => {
     const currentCount = counts[currentWord];
@@ -164,6 +216,7 @@ function App() {
       await addDoc(collection(db, 'history'), {
         count: currentCount,
         word: currentWord,
+        lostFocusCount: lostFocusCount,
         timestamp: serverTimestamp(),
         userId: user.uid
       });
@@ -171,6 +224,7 @@ function App() {
         ...prev,
         [currentWord]: 0
       }));
+      setLostFocusCount(0);
       fetchHistory();
     } catch (e) {
       debugError("Error adding document: ", e);
@@ -250,28 +304,51 @@ function App() {
           </div>
 
           <div className="counter-container">
-            <span className={`counter ${bump ? 'bump' : ''}`}>
-              {counts[currentWord]}
-            </span>
-            <p className="counter-label">Repeats</p>
+            <div className="main-counter">
+              <span className={`counter ${bump ? 'bump' : ''}`}>
+                {counts[currentWord]}
+              </span>
+              <p className="counter-label">Repeats</p>
+            </div>
+            {lostFocusCount > 0 && (
+              <div className="lost-focus-badge" title="Lost Focus Count">
+                <span className="lost-focus-count">{lostFocusCount}</span>
+                <span className="lost-focus-label">Lost Focus</span>
+              </div>
+            )}
+          </div>
+
+          <div className="primary-action">
+            <button
+              className="plus-btn"
+              onClick={handleIncrement}
+              aria-label={`Increment ${currentWord} count`}
+            >
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
 
           <div className="action-buttons">
             <button
               className="action-btn reset-btn"
               onClick={handleReset}
-              disabled={counts[currentWord] === 0}
+              disabled={counts[currentWord] === 0 && lostFocusCount === 0}
+              title="Reset session"
             >
-              Reset
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+              </svg>
             </button>
 
             <button
-              className="plus-btn"
-              onClick={handleIncrement}
-              aria-label={`Increment ${currentWord} count`}
+              className="action-btn lost-focus-btn"
+              onClick={handleLostFocus}
+              title="I'm distracted / lost focus"
             >
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><path d="M16 16s-1.5-2-4-2-4 2-4 2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" />
               </svg>
             </button>
 
@@ -279,46 +356,147 @@ function App() {
               className="action-btn save-btn"
               onClick={handleSave}
               disabled={counts[currentWord] === 0 || isSaving || !user}
-              title={!user ? "Login to save your sessions" : ""}
+              title={!user ? "Login to save your sessions" : "Save session to history"}
             >
-              {isSaving ? '...' : (user ? 'Save' : 'Save')}
+              {isSaving ? (
+                <span className="loading-dots">...</span>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
+                </svg>
+              )}
             </button>
           </div>
 
           <div className="history-section">
-            {user && dailyStats.length > 0 && (
-              <div className="daily-summary">
-                <h3 className="history-title">Daily Logs</h3>
-                <div className="daily-stats-grid">
-                  {dailyStats.map((stat) => (
-                    <div key={stat.date} className="daily-stat-badge">
-                      <span className="stat-date">{stat.date}</span>
-                      <span className="stat-count">{stat.count}</span>
-                    </div>
-                  ))}
+            <div className="heatmap-container">
+              <div className="heatmap-header">
+                <p className="group-label">Activity Heatmap</p>
+                <div className="heatmap-legend">
+                  <span>Less</span>
+                  <div className="legend-cell level-0"></div>
+                  <div className="legend-cell level-1"></div>
+                  <div className="legend-cell level-2"></div>
+                  <div className="legend-cell level-3"></div>
+                  <div className="legend-cell level-4"></div>
+                  <span>More</span>
                 </div>
               </div>
-            )}
+              <div className="heatmap-grid">
+                {heatmapData.length > 0 ? heatmapData.map((day) => {
+                  let level = 0;
+                  if (day.count > 0) {
+                    if (day.count === 1) level = 1;
+                    else if (day.count <= 3) level = 2;
+                    else if (day.count <= 5) level = 3;
+                    else level = 4;
+                  }
+                  return (
+                    <div
+                      key={day.date}
+                      className={`heatmap-cell level-${level}`}
+                      title={`${day.date}: ${day.count} sessions`}
+                      style={{ gridRow: day.dayIndex + 1 }}
+                    />
+                  );
+                }) : (
+                  <div className="heatmap-loading">Loading activity...</div>
+                )}
+              </div>
+            </div>
 
             <div className="history-header">
               <h3 className="history-title">{user ? "Recent Details" : "Session History"}</h3>
+              {user && history.length > 0 && (
+                <div className="total-sessions-badge">
+                  <span className="badge-label">TOTAL SESSIONS:</span>
+                  <span className="badge-value">{history.length}</span>
+                </div>
+              )}
             </div>
 
             <div className="history-list">
               {!user ? (
                 <p className="no-history">Login to see your history</p>
               ) : history.length > 0 ? (
-                history.map((item) => (
-                  <div key={item.id} className="history-item">
-                    <div className="history-info">
-                      <span className="history-count">{item.count}</span>
-                      <span className="history-word">{item.word || 'relax'}</span>
+                <>
+                  {todaySessions.length > 0 && (
+                    <div className="history-group">
+                      <p className="group-label">Today</p>
+                      {todaySessions.map((item) => (
+                        <div key={item.id} className="history-item">
+                          <div className="history-info">
+                            <div className="history-main-info">
+                              <span className="history-count">{item.count}</span>
+                              <span className="history-word">{item.word || 'relax'}</span>
+                            </div>
+                            {item.lostFocusCount !== undefined && item.lostFocusCount > 0 && (
+                              <div className="history-lost-focus" title="Lost focus occurrences">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="10" /><line x1="8" y1="15" x2="16" y2="15" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" />
+                                </svg>
+                                <span>{item.lostFocusCount}</span>
+                              </div>
+                            )}
+                          </div>
+                          <span className="history-date">
+                            {item.timestamp?.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                    <span className="history-date">
-                      {item.timestamp?.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                ))
+                  )}
+
+                  {pastSessions.length > 0 && (
+                    <div className="history-group past-sessions">
+                      {!showAllHistory ? (
+                        <button className="expand-history-btn" onClick={() => setShowAllHistory(true)}>
+                          Show Past Sessions ({pastSessions.length})
+                        </button>
+                      ) : (
+                        <>
+                          <div className="group-header">
+                            <p className="group-label">Earlier</p>
+                            <button className="collapse-history-btn" onClick={() => setShowAllHistory(false)}>Hide</button>
+                          </div>
+                          {Object.entries(groupedPastSessions).map(([date, sessions]) => (
+                            <div key={date} className="daily-group">
+                              <div className="daily-group-header">
+                                <span className="daily-group-date">{date}</span>
+                                <span className="daily-group-count">{sessions.length} sessions</span>
+                              </div>
+                              {sessions.map((item) => (
+                                <div key={item.id} className="history-item">
+                                  <div className="history-info">
+                                    <div className="history-main-info">
+                                      <span className="history-count">{item.count}</span>
+                                      <span className="history-word">{item.word || 'relax'}</span>
+                                    </div>
+                                    {item.lostFocusCount !== undefined && item.lostFocusCount > 0 && (
+                                      <div className="history-lost-focus" title="Lost focus occurrences">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                          <circle cx="12" cy="12" r="10" /><line x1="8" y1="15" x2="16" y2="15" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" />
+                                        </svg>
+                                        <span>{item.lostFocusCount}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="history-date">
+                                    {item.timestamp?.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {todaySessions.length === 0 && !showAllHistory && (
+                    <p className="no-history">No sessions today yet</p>
+                  )}
+                </>
               ) : (
                 <p className="no-history">No sessions saved yet</p>
               )}
